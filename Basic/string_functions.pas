@@ -2,8 +2,6 @@ program string_functions;
 
 var a, b, c :string;
     num :integer;
-//    r :real;
-//    long :longint;
     code :word;
 
 // Analog to LowerCase function
