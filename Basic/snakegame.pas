@@ -3,7 +3,7 @@
     1) Borders which user can choose (program will ask which walls 
     he wanna see and he will type something like "url" for upper right
     and left borders)
-    2) Different head and tale
+    2) Different head and tale (Done)
     3) Score (Done)
     4) Obstakles (probably random, probably map creator in txt file)
     5) User to choose colors and probably symbols for snake, apples, obstackles, borders
@@ -15,7 +15,7 @@
 program Snake;
 uses crt;
 const
-    DelayDuration = 100;
+    DelayDuration : array [1..3] of integer = (100, 50, 200);
     MaxLength = 255;
     Growth = 3;
     StartLength = 5;
@@ -48,10 +48,10 @@ begin
     end
 end;
 
-procedure ShowStar(var sh: SnakeHead);
+procedure ShowHead(var sh: SnakeHead);
 begin
     GotoXY(sh.CurX, sh.CurY);
-    write('*');
+    write('🙂');
     GotoXY(1, 1)
 end;
 
@@ -69,7 +69,7 @@ begin
     else
     if sh.CurY < 3 then
         sh.CurY := ScreenHeight - 2;
-    ShowStar(sh)
+    ShowHead(sh)
 end;
 
 procedure SetDirection(var sh: SnakeHead; dx, dy: integer; var st: array of SnakeTail);
@@ -173,7 +173,7 @@ end;
 procedure GenerateApple (var app: Apple);
 begin
     GotoXY(app.CurX, app.CurY);
-    write('@');
+    write('🍎');
     GotoXY(1, 1);
 end;
 
@@ -183,7 +183,7 @@ begin
     begin
         app.eaten := true; 
         GotoXY(app.CurX, app.CurY);
-        write('*');
+        write('🙂');
         GotoXY(1,1);
         score := score + 1;
     end;
@@ -205,10 +205,14 @@ begin
     SnakeGrowth(app, tlength);
 end;
 
-procedure SetScoreUI (var score: integer);
+procedure SetScoreUI (var score: integer; var speed: integer; var gamemode: integer);
 begin
-    GotoXY(ScreenWidth div 3,1);
+    GotoXY((ScreenWidth div 3) - 10,1);
     write('Score: ', score);
+    GotoXY((ScreenWidth div 2) - 5,1);
+    write('Gamemode: ', gamemode);
+    GotoXY((ScreenWidth - (ScreenWidth div 3)) + 3,1);
+    write('Speed: ', speed);
     GotoXY(1,1)
 end;
 
@@ -241,9 +245,9 @@ begin
     GotoXY(1,1)
 end;
 
-procedure SetUI (var score: integer);
+procedure SetUI (var score: integer; var speed: integer; var gamemode: integer);
 begin
-    SetScoreUI(score);
+    SetScoreUI(score, speed, gamemode);
     SetBordersUI();
 end;
 
@@ -266,13 +270,37 @@ begin
     write('SPACE  Pause menu');
     GotoXY((ScreenWidth - 9) div 2,WhereY + 1);
     write('ESC  Quit');
+    GotoXY((ScreenWidth - 15) div 2,WhereY + 1);
+    write('1  Change speed');
+    GotoXY((ScreenWidth - 18) div 2,WhereY + 1);
+    write('2  Change gamemode');
     cleared := false;
+    GotoXY(1,1);
+end;
+
+procedure PageOne ();
+begin
+    clrscr;
+    GotoXY((ScreenWidth - 10) div 2,(ScreenHeight - 9) div 2);
+    write('SNAKE GAME');
+    GotoXY((ScreenWidth - 9) div 2,WhereY + 2);
+    write('Set speed:');
+    GotoXY((ScreenWidth - 13) div 2,WhereY + 1);
+    write('1  Normal speed');
+    GotoXY((ScreenWidth - 12) div 2,WhereY + 1);
+    write('2  Fast speed');
+    GotoXY((ScreenWidth - 10) div 2,WhereY + 1);
+    write('3  Slow speed');
+    GotoXY((ScreenWidth - 17) div 2,WhereY + 1);
+    write('SPACE  Pause menu');
+    GotoXY((ScreenWidth - 9) div 2,WhereY + 1);
+    write('ESC  Quit');
     GotoXY(1,1);
 end;
 
 var
     sh: SnakeHead;
-    c, tlength, score: integer;
+    c, tlength, score, prevc, speed, gamemode: integer;
     st: array [1..MaxLength] of SnakeTail;
     app: Apple;
     cleared: boolean;
@@ -284,16 +312,33 @@ begin
     sh.dx := 0;
     sh.dy := 0;
     app.eaten := true;
-    ShowStar(sh);
+    ShowHead(sh);
     score := 0;
     c := 32;
     cleared := false;
+    prevc := 0;
+    speed := 1;
+    gamemode := 1337;
     while true do
     begin
         if not KeyPressed then
         begin
             if c = 32 then
-                PauseMenu(cleared)
+            begin
+                PauseMenu(cleared);
+                prevc := c;
+            end
+            else if (c = 49) and (prevc = 32) then
+            begin
+                  PageOne();
+                  prevc := c;
+            end
+            else if (c = 49) and (prevc = 49) then
+                speed := 1
+            else if (c = 50) and (prevc = 49) then
+                speed := 2 
+            else if (c = 51) and (prevc = 49) then
+                speed := 3        
             else
             begin
                 if cleared = false then
@@ -301,14 +346,15 @@ begin
                     clrscr;
                     cleared := true;
                 end;
-                SetUI(score);
+                SetUI(score, speed, gamemode);
                 CheckAndMoveTail(st, sh, tlength);
                 ShowTail(st, sh, tlength);
                 MoveStar(sh);
                 AppleProcedure(st, sh, tlength, app, score); 
-                CheckCollision(st, sh, tlength);             
+                CheckCollision(st, sh, tlength); 
+                prevc := c;    
             end; 
-            delay(DelayDuration);
+            delay(DelayDuration[speed]);
             continue
         end;
         GetKey(c);
@@ -317,7 +363,7 @@ begin
             -77: SetDirection(sh, 1, 0, st);         { right arrow }
             -72: SetDirection(sh, 0, -1, st);           { up arrow }
             -80: SetDirection(sh, 0, 1, st);          { down arrow }
-             32: SetDirection(sh, 0, 0, st);   { space bar (pause) }
+             32: SetDirection(sh, 0, 0, st);   { space bar (pause) }             
              27:  break                            { escape (exit) }
         end
     end;
