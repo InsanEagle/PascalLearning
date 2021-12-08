@@ -4,7 +4,7 @@
     he wanna see and he will type something like "url" for upper right
     and left borders)
     2) Different head and tale
-    3) Score
+    3) Score (Done)
     4) Obstakles (probably random, probably map creator in txt file)
     5) User to choose colors and probably symbols for snake, apples, obstackles, borders
     6) Level changing after reaching certain score
@@ -18,7 +18,19 @@ const
     DelayDuration = 100;
     MaxLength = 255;
     Growth = 3;
-    StartLength = 10;
+    StartLength = 5;
+
+type
+    SnakeHead = record
+        CurX, CurY, dx, dy: integer;
+    end;
+    SnakeTail = record
+        CurX, CurY: integer;
+    end;
+    Apple = record
+        CurX, CurY: integer;
+        eaten: boolean;
+    end;
 
 procedure GetKey(var code: integer);
 var
@@ -36,18 +48,6 @@ begin
     end
 end;
 
-type
-    SnakeHead = record
-        CurX, CurY, dx, dy: integer;
-    end;
-    SnakeTail = record
-        CurX, CurY: integer;
-    end;
-    Apple = record
-        CurX, CurY: integer;
-        eaten: boolean;
-    end;
-
 procedure ShowStar(var sh: SnakeHead);
 begin
     GotoXY(sh.CurX, sh.CurY);
@@ -58,17 +58,17 @@ end;
 procedure MoveStar(var sh: SnakeHead);
 begin
     sh.CurX := sh.CurX + sh.dx;
-    if sh.CurX > ScreenWidth then
-        sh.CurX := 1
+    if sh.CurX > ScreenWidth - 1 then
+        sh.CurX := 3
     else
-    if sh.CurX < 1 then
-        sh.CurX := ScreenWidth;
+    if sh.CurX < 3 then
+        sh.CurX := ScreenWidth - 1;
     sh.CurY := sh.CurY + sh.dy;
-    if sh.CurY > ScreenHeight then
-        sh.CurY := 1
+    if sh.CurY > ScreenHeight - 2 then
+        sh.CurY := 3
     else
-    if sh.CurY < 1 then
-        sh.CurY := ScreenHeight;
+    if sh.CurY < 3 then
+        sh.CurY := ScreenHeight - 2;
     ShowStar(sh)
 end;
 
@@ -114,6 +114,18 @@ begin
         MoveTail(st, sh, tlength);
 end;
 
+procedure ShowTail (var st: array of SnakeTail; var sh: SnakeHead; var tlength: integer);
+var
+    i: integer;
+begin
+    for i := 1 to tlength do
+    begin
+        GotoXY(st[i].CurX,st[i].CurY);
+        write('*');
+        GotoXY(1,1);
+    end;
+end;
+
 procedure CheckCollision (var st: array of SnakeTail; var sh: SnakeHead; var tlength: integer);
 var
     i: integer;
@@ -129,7 +141,7 @@ begin
         end; 
 end;
 
-procedure CheckAndGenerateApple(var st: array of SnakeTail; var sh: SnakeHead; var tlength: integer; var app: Apple);
+procedure CheckApple(var st: array of SnakeTail; var sh: SnakeHead; var tlength: integer; var app: Apple);
 var
     i: integer;
     done: boolean;
@@ -138,8 +150,8 @@ begin
     begin
         repeat
             done := true;
-            app.CurX := random(ScreenWidth) + 1;
-            app.CurY := random(ScreenHeight) + 1;
+            app.CurX := random(ScreenWidth - 2) + 3;
+            app.CurY := random(ScreenHeight - 4) + 3;
             if (sh.CurX = app.CurX) and (sh.CurY = app.CurY) then
             begin
                 done := false;
@@ -154,17 +166,28 @@ begin
                 end;   
             end;           
         until (done);
-    GotoXY(app.CurX, app.CurY);
-    write('@');
-    GotoXY(1, 1);
-    app.eaten := false;
+        app.eaten := false;
     end;
 end;
 
-procedure IfEatenApple (var sh: SnakeHead; var app: Apple);
+procedure GenerateApple (var app: Apple);
+begin
+    GotoXY(app.CurX, app.CurY);
+    write('@');
+    GotoXY(1, 1);
+end;
+
+procedure IfEatenApple (var sh: SnakeHead; var app: Apple; var score: integer);
 begin
     if (sh.CurX = app.CurX) and (sh.CurY = app.CurY) then
-        app.eaten := true;     
+    begin
+        app.eaten := true; 
+        GotoXY(app.CurX, app.CurY);
+        write('*');
+        GotoXY(1,1);
+        score := score + 1;
+    end;
+    
 end;
 
 procedure SnakeGrowth (var app: Apple; var tlength: integer);
@@ -174,18 +197,85 @@ begin
             tlength := tlength + Growth;
 end;
 
-procedure AppleProcedure (var st: array of SnakeTail; var sh: SnakeHead; var tlength: integer; var app: Apple);
+procedure AppleProcedure (var st: array of SnakeTail; var sh: SnakeHead; var tlength: integer; var app: Apple; var score: integer);
 begin
-    CheckAndGenerateApple(st, sh, tlength, app);
-    IfEatenApple(sh, app);
+    CheckApple(st, sh, tlength, app);
+    GenerateApple(app);
+    IfEatenApple(sh, app, score);
     SnakeGrowth(app, tlength);
+end;
+
+procedure SetScoreUI (var score: integer);
+begin
+    GotoXY(ScreenWidth div 3,1);
+    write('Score: ', score);
+    GotoXY(1,1)
+end;
+
+procedure SetBordersUI ();
+var
+    i: integer;
+begin
+    for i := 2 to ScreenWidth - 2 do
+    begin
+        GotoXY(i,2);
+        write('-');
+        GotoXY(i,ScreenHeight - 1);
+        write('-');
+    end;
+    for i := 3 to ScreenHeight - 1  do
+    begin
+        GotoXY(2,i);
+        write('|');
+        GotoXY(ScreenWidth,i);
+        write('|');
+    end;
+    GotoXY(2,2);
+    write('+');
+    GotoXY(2,ScreenHeight - 1);
+    write('+');
+    GotoXY(ScreenWidth,2);
+    write('+');
+    GotoXY(ScreenWidth,ScreenHeight - 1);
+    write('+'); 
+    GotoXY(1,1)
+end;
+
+procedure SetUI (var score: integer);
+begin
+    SetScoreUI(score);
+    SetBordersUI();
+end;
+
+procedure PauseMenu (var cleared: boolean);
+begin
+    clrscr;
+    GotoXY((ScreenWidth - 10) div 2,(ScreenHeight - 9) div 2);
+    write('SNAKE GAME');
+    GotoXY((ScreenWidth - 9) div 2,WhereY + 2);
+    write('Controls:');
+    GotoXY((ScreenWidth - 13) div 2,WhereY + 1);
+    write('→  Move right');
+    GotoXY((ScreenWidth - 12) div 2,WhereY + 1);
+    write('←  Move left');
+    GotoXY((ScreenWidth - 10) div 2,WhereY + 1);
+    write('↑  Move up');
+    GotoXY((ScreenWidth - 12) div 2,WhereY + 1);
+    write('↓  Move down');
+    GotoXY((ScreenWidth - 17) div 2,WhereY + 1);
+    write('SPACE  Pause menu');
+    GotoXY((ScreenWidth - 9) div 2,WhereY + 1);
+    write('ESC  Quit');
+    cleared := false;
+    GotoXY(1,1);
 end;
 
 var
     sh: SnakeHead;
-    c, tlength: integer;
+    c, tlength, score: integer;
     st: array [1..MaxLength] of SnakeTail;
     app: Apple;
+    cleared: boolean;
 begin
     randomize;
     clrscr;
@@ -195,14 +285,29 @@ begin
     sh.dy := 0;
     app.eaten := true;
     ShowStar(sh);
+    score := 0;
+    c := 32;
+    cleared := false;
     while true do
     begin
         if not KeyPressed then
         begin
-            CheckAndMoveTail(st, sh, tlength);
-            MoveStar(sh);
-            AppleProcedure(st, sh, tlength, app); 
-            CheckCollision(st, sh, tlength);
+            if c = 32 then
+                PauseMenu(cleared)
+            else
+            begin
+                if cleared = false then
+                begin
+                    clrscr;
+                    cleared := true;
+                end;
+                SetUI(score);
+                CheckAndMoveTail(st, sh, tlength);
+                ShowTail(st, sh, tlength);
+                MoveStar(sh);
+                AppleProcedure(st, sh, tlength, app, score); 
+                CheckCollision(st, sh, tlength);             
+            end; 
             delay(DelayDuration);
             continue
         end;
@@ -212,8 +317,8 @@ begin
             -77: SetDirection(sh, 1, 0, st);         { right arrow }
             -72: SetDirection(sh, 0, -1, st);           { up arrow }
             -80: SetDirection(sh, 0, 1, st);          { down arrow }
-            32:  SetDirection(sh, 0, 0, st);   { space bar (pause) }
-            27:  break                         { escape (exit) }
+             32: SetDirection(sh, 0, 0, st);   { space bar (pause) }
+             27:  break                            { escape (exit) }
         end
     end;
     clrscr
